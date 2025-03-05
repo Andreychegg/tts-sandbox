@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Песочница для синтеза речи</title>
+</head>
+<body>
+    <h2>Введите текст для синтеза:</h2>
+    <textarea id="textInput" rows="4" cols="50"></textarea>
+    <br>
+    <select id="methodSelect">
+        <option value="gtts">gTTS</option>
+        <option value="pyttsx3">pyttsx3</option>
+    </select>
+    <br><br>
+    <button onclick="synthesizeSpeech()">Синтезировать</button>
+
+    <h3>Результат:</h3>
+    <audio id="audioPlayer" controls style="display: none;"></audio>
+
+    <script>
+        function synthesizeSpeech() {
+            let text = document.getElementById("textInput").value;
+            let method = document.getElementById("methodSelect").value;
+
+            fetch("/synthesize", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: text, method: method })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.audio_url) {
+                    let audioPlayer = document.getElementById("audioPlayer");
+                    audioPlayer.src = data.audio_url;
+                    audioPlayer.style.display = "block";
+                } else {
+                    alert("Ошибка при синтезе речи!");
+                }
+            })
+            .catch(error => console.error("Ошибка:", error));
+        }
+    </script>
+</body>
+</html>

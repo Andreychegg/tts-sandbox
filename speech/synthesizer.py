@@ -7,14 +7,14 @@ class SpeechSynthesizer:
         self.engine.setProperty("rate", 150)
         self.engine.setProperty("volume", 1.0)
 
-    def synthesize_with_gtts(self, text): # Синтез gTTS
-        output_file = "static/output_gtts.mp3"
+    def synthesize_with_gtts(self, text, format="mp3"): # Синтез gTTS
+        output_file = f"static/output_gtts.{format}"
         tts = gTTS(text=text, lang="ru")
         tts.save(output_file)
         return output_file
 
-    def synthesize_with_pyttsx3(self, text): # Синтез pyttsx3
-        output_file = "static/output_pyttsx3.wav"
+    def synthesize_with_pyttsx3(self, text, format="wav"): # Синтез pyttsx3
+        output_file = f"static/output_pyttsx3.{format}"
         self.engine.save_to_file(text, output_file)
         self.engine.runAndWait()
         return output_file

@@ -9,11 +9,22 @@
     <h2>Введите текст для синтеза:</h2>
     <textarea id="textInput" rows="4" cols="50"></textarea>
     <br>
+
+    <h3>Выберите синтезатор и формат файла:</h3>
+    <label for="methodSelect">Синтезатор:</label>
     <select id="methodSelect">
         <option value="gtts">gTTS</option>
         <option value="pyttsx3">pyttsx3</option>
     </select>
+    <br>
+
+    <label for="formatSelect">Формат файла:</label>
+    <select id="formatSelect">
+        <option value="mp3">MP3</option>
+        <option value="wav">WAV</option>
+    </select>
     <br><br>
+
     <button onclick="synthesizeSpeech()">Синтезировать</button>
 
     <h3>Результат:</h3>
@@ -23,11 +34,12 @@
         function synthesizeSpeech() {
             let text = document.getElementById("textInput").value;
             let method = document.getElementById("methodSelect").value;
+            let format = document.getElementById("formatSelect").value;
 
             fetch("/synthesize", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: text, method: method })
+                body: JSON.stringify({ text: text, method: method, format: format })
             })
             .then(response => response.json())
             .then(data => {

@@ -10,11 +10,13 @@
     <textarea id="textInput" rows="4" cols="50"></textarea>
     <br>
 
-    <h3>Выберите синтезатор и формат файла:</h3>
+    <h3>Выберите синтезатор, формат файла, язык (для gTTS) и голос (для Edge-TTS):</h3>
+
     <label for="methodSelect">Синтезатор:</label>
-    <select id="methodSelect">
+    <select id="methodSelect" onchange="toggleOptions()">
         <option value="gtts">gTTS</option>
         <option value="pyttsx3">pyttsx3</option>
+        <option value="edgetts">Edge-TTS</option>
     </select>
     <br>
 
@@ -22,6 +24,21 @@
     <select id="formatSelect">
         <option value="mp3">MP3</option>
         <option value="wav">WAV</option>
+    </select>
+    <br>
+
+    <label for="languageSelect" id="languageLabel">Язык:</label>
+    <select id="languageSelect">
+        <option value="ru">Русский</option>
+        <option value="en">Английский</option>
+        <option value="es">Испанский</option>
+    </select>
+    <br>
+
+    <label for="voiceSelect" id="voiceLabel" style="display:none;">Голос:</label>
+    <select id="voiceSelect" style="display:none;">
+        <option value="ru-RU-SvetlanaNeural">Svetlana (Русский)</option>
+        <option value="en-US-JennyNeural">Jenny (Английский)</option>
     </select>
     <br><br>
 
@@ -31,15 +48,46 @@
     <audio id="audioPlayer" controls style="display: none;"></audio>
 
     <script>
+        function toggleOptions() {
+            let method = document.getElementById("methodSelect").value;
+            let languageSelect = document.getElementById("languageSelect");
+            let languageLabel = document.getElementById("languageLabel");
+            let voiceSelect = document.getElementById("voiceSelect");
+            let voiceLabel = document.getElementById("voiceLabel");
+
+            if (method === "gtts") {
+                languageSelect.style.display = "inline";
+                languageLabel.style.display = "inline";
+                voiceSelect.style.display = "none";
+                voiceLabel.style.display = "none";
+            } else if (method === "edgetts") {
+                voiceSelect.style.display = "inline";
+                voiceLabel.style.display = "inline";
+                languageSelect.style.display = "none";
+                languageLabel.style.display = "none";
+            } else {
+                languageSelect.style.display = "none";
+                languageLabel.style.display = "none";
+                voiceSelect.style.display = "none";
+                voiceLabel.style.display = "none";
+            }
+        }
+
         function synthesizeSpeech() {
             let text = document.getElementById("textInput").value;
             let method = document.getElementById("methodSelect").value;
             let format = document.getElementById("formatSelect").value;
+            let language = document.getElementById("languageSelect").value;
+            let voice = document.getElementById("voiceSelect").value;
+
+            let payload = { text, method, format };
+            if (method === "gtts") payload.language = language;
+            if (method === "edgetts") payload.voice = voice;
 
             fetch("/synthesize", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: text, method: method, format: format })
+                body: JSON.stringify(payload)
             })
             .then(response => response.json())
             .then(data => {
@@ -48,11 +96,12 @@
                     audioPlayer.src = data.audio_url;
                     audioPlayer.style.display = "block";
                 } else {
-                    alert("Ошибка при синтезе речи!");
+                    alert("Ошибка!");
                 }
-            })
-            .catch(error => console.error("Ошибка:", error));
+            });
         }
+
+        toggleOptions();
     </script>
 </body>
 </html>

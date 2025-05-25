@@ -17,8 +17,18 @@
         <option value="gtts">gTTS</option>
         <option value="pyttsx3">pyttsx3</option>
         <option value="edgetts">Edge-TTS</option>
+        <option value="silero">Silero TTS</option>
     </select>
     <br>
+
+    <div id="sileroOptions" style="display:none;">
+    <label for="sileroSpeaker">Голос:</label>
+    <select id="sileroSpeaker">
+        <option value="kseniya">Ксения</option>
+        <option value="aidar">Айдар</option>
+        <option value="baya">Бая</option>
+    </select>
+    </div>
 
     <label for="formatSelect">Формат файла:</label>
     <select id="formatSelect">
@@ -47,6 +57,8 @@
     <h3>Результат:</h3>
     <audio id="audioPlayer" controls style="display: none;"></audio>
 
+    <div id="synthesisInfo" style="margin-top: 10px; font-style: italic;"></div>
+
     <script>
         function toggleOptions() {
             let method = document.getElementById("methodSelect").value;
@@ -71,9 +83,14 @@
                 voiceSelect.style.display = "none";
                 voiceLabel.style.display = "none";
             }
+
+            const sileroDiv = document.getElementById("sileroOptions");
+            sileroDiv.style.display = (method === "silero") ? "block" : "none";
         }
 
         function synthesizeSpeech() {
+            document.getElementById("synthesisInfo").textContent = "Синтез речи...";
+
             let text = document.getElementById("textInput").value;
             let method = document.getElementById("methodSelect").value;
             let format = document.getElementById("formatSelect").value;
@@ -92,16 +109,110 @@
             .then(response => response.json())
             .then(data => {
                 if (data.audio_url) {
+                    currentAudioUrl = data.audio_url;
                     let audioPlayer = document.getElementById("audioPlayer");
                     audioPlayer.src = data.audio_url;
                     audioPlayer.style.display = "block";
+
+                    // Отображаем время синтеза
+                    document.getElementById("synthesisInfo").textContent =
+                        `Синтез занял: ${data.synthesis_time} секунд`;
                 } else {
-                    alert("Ошибка!");
+                    document.getElementById("synthesisInfo").textContent =
+                        "Ошибка при синтезе!";
                 }
             });
         }
 
+        function cleanAudio() {
+            if (!currentAudioUrl) {
+                alert("Сначала синтезируйте речь!");
+                return;
+            }
+
+            document.getElementById("cleanAudioBtn").disabled = true;
+            document.getElementById("cleanAudioBtn").textContent = "Обработка...";
+
+            fetch("/clean-audio", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ audio_url: currentAudioUrl })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.cleaned_audio_url) {
+                    const cleanedPlayer = document.getElementById("cleanedAudioPlayer");
+                    cleanedPlayer.src = data.cleaned_audio_url;
+                    cleanedPlayer.style.display = "block";
+
+                document.getElementById("cleanAudioBtn").disabled = false;
+                document.getElementById("cleanAudioBtn").textContent = "Улучшить качество";
+            }
+        })
+        }
+
         toggleOptions();
     </script>
+
+    <h3>Улучшенная версия:</h3>
+    <audio id="cleanedAudioPlayer" controls style="display: none;"></audio>
+    <button id="cleanAudioBtn" onclick="cleanAudio()" style="margin-top: 10px;">
+        Улучшить качество (подавить шум)
+    </button>
+
+    <h3>Анализ качества:</h3>
+    <button onclick="analyzeAudio()">Проанализировать</button>
+    <div id="analysisResults" style="margin-top: 20px;"></div>
+
+    <script>
+        function analyzeAudio() {
+            let audioPlayer = document.getElementById("audioPlayer");
+            if (!audioPlayer.src) {
+                alert("Сначала синтезируйте речь!");
+                return;
+            }
+
+            fetch("/analyze", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ audio_url: audioPlayer.src })
+            })
+            .then(response => response.json())
+            .then(data => {
+                displayAnalysisResults(data);
+            });
+        }
+
+        function displayAnalysisResults(results) {
+            let container = document.getElementById("analysisResults");
+
+            if (results.error) {
+                container.innerHTML = `<p style="color:red;">Ошибка: ${results.error}</p>`;
+                return;
+            }
+
+            let html = `
+                <h4>Основные метрики:</h4>
+                <p>Длительность: ${results.basic_metrics.duration.toFixed(2)} сек</p>
+                <p>Частота дискретизации: ${results.basic_metrics.sample_rate} Гц</p>
+                <p>Энергия речи: ${results.basic_metrics.energy.mean.toFixed(4)} (разброс: ${results.basic_metrics.energy.std.toFixed(4)})</p>
+
+                <h4>Паузы:</h4>
+                <p>Количество пауз: ${results.pauses.count}</p>
+                <p>Общая длительность пауз: ${results.pauses.total_duration.toFixed(2)} сек</p>
+
+                <h4>Тон и интонация:</h4>
+                <p>Средняя частота: ${results.pitch.mean ? results.pitch.mean.toFixed(1) : 'N/A'} Гц</p>
+                <p>Разброс частоты: ${results.pitch.std ? results.pitch.std.toFixed(1) : 'N/A'} Гц</p>
+
+                <h4>Качество:</h4>
+                <p>Стабильность MFCC: ${results.quality.mfcc_stability.toFixed(4)}</p>
+                <p>Гармоничность: ${results.quality.harmonicity.toFixed(4)}</p>
+            `;
+
+            container.innerHTML = html;
+        }
+    </script>
+
 </body>
 </html>
